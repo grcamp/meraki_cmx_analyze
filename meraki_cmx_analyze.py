@@ -712,14 +712,17 @@ def main():
     endTimeRangeEpoch = 0
     currentTime = 0
     
+    # Check if all arguments exist and exit with info if failed
     if len(sys.argv) < 3:
         print ("meraki_cmx_analyze <input_file_name> <csv_file_preamble>")
         return None
     
+    # Build input file and strip extra characters from preamble
     csv_file_preamble = sys.argv[2].strip()
     inputStream = open(sys.argv[1], 'r')
     allLines = [i for i in inputStream]
     
+    # For each line add observations find the network it is associated with and add the observation to the correct network
     for line in allLines:
         if not ("Seen Epoch" in line) and ("," in line):
             networkName = line.split(',')[0].strip()
