@@ -383,7 +383,9 @@ class Network:
             
             if client.is_connected(startTimeEpoch, endTimeEpoch) == True:
                 connectedCount = connectedCount + 1
-
+        
+        passerbyCount = passerbyCount - visitorCount
+        
         captureRate = float(connectedCount) / float(visitorCount)
         captureRate = captureRate * 100
         captureRate = long(round(captureRate, 0))
@@ -737,92 +739,99 @@ def main():
             manufacturer = line.split(',')[9].strip()
             os = line.split(',')[10].strip()
             
+            # Call find_network to identify the network for this new observation
             myNetwork = find_network(networkName, networks)
             
+            # Add observation to the network
             myNetwork.add_observation(apMac, clientMac, ipv4, ipv6, seenTime, seenEpoch, ssid, rssi, manufacturer, os)
 
-
+    # Print list of client observations
     print("---------------------------------------------------------------------------")
-    print("Client Observations")
+    print("Calculating Client Observations")
     print("---------------------------------------------------------------------------")
-    print("Network,AP Mac,Client Mac,ipv4,ipv6,Seen Time,Epoch Time,SSID,RSSI,Manufacturer,OS")
     fileOutput = "Network,AP Mac,Client Mac,ipv4,ipv6,Seen Time,Epoch Time,SSID,RSSI,Manufacturer,OS" + "\n"
+    # For each network get list of client observations
     for network in networks:
         cmx_report_data = network.get_observations()
-        print(cmx_report_data)
         fileOutput = fileOutput + cmx_report_data
     
+    # Output list of client observations
     f = open(csv_file_preamble + "_client_observations.csv",'w')
     f.write(fileOutput)
     f.close()
         
-    
+    # Calculate client visits
     print("---------------------------------------------------------------------------")
-    print("Client Visits")
+    print("Calculating Client Visits")
     print("---------------------------------------------------------------------------")
-    print("Network,Client Mac,Seen Time Start,Seen Time End,Visit Length,Connected")
     fileOutput = "Network,Client Mac,Seen Time Start,Seen Time End,Visit Length,Connected" + "\n"
+    # Calculate client visits for each network
     for network in networks:
+        # Calculate visit as 5 observations per window, 1200 second window, min start RSSI 20, min session RSSI 15
         network.discover_client_visits(5,1200,20,15)
+        # Gather visits and print
         cmx_report_data = network.get_visits()
-        print(cmx_report_data)
         fileOutput = fileOutput + cmx_report_data
     
+    # Output visits to file
     f = open(csv_file_preamble + "_client_visits.csv",'w')
     f.write(fileOutput)
     f.close()
     
+    # Search all networks for the first and last calendar day in file
     startTimeRangeEpoch = find_first_day(networks)
     endTimeRangeEpoch = find_last_day(networks)
     
+    # Set currentTime to first day
     currentTime = startTimeRangeEpoch
     
+    # Print proximity report
     print("---------------------------------------------------------------------------")
-    print("CMX Proximity Report")
+    print("Calculating CMX Proximity Report")
     print("---------------------------------------------------------------------------")
-    print("Network,Date,Passerby,Visitors,Connected,Capture Rate")
     fileOutput = "Network,Date,Passerby,Visitors,Connected,Capture Rate" + "\n"
+    # While we have not reached the last day, gather the proximity report for each day
     while currentTime < endTimeRangeEpoch:
         for network in networks:
             cmx_report_data = network.get_cmx_proximity_report(currentTime, currentTime + 86399)
-            print(cmx_report_data)
             fileOutput = fileOutput + cmx_report_data + "\n"
         
         currentTime = currentTime + 86400
     
+    # Write report to output file
     f = open(csv_file_preamble + "_cmx_proximity_report.csv",'w')
     f.write(fileOutput)
     f.close()
     
+    # Set currentTime to first day
     currentTime = startTimeRangeEpoch
     
     print("---------------------------------------------------------------------------")
-    print("CMX Engagement Report")
+    print("Calculating CMX Engagement Report")
     print("---------------------------------------------------------------------------")
-    print("Network,Date,5-20 mins,20-60 mins,1-6 hrs,6+ hrs")
     fileOutput = "Network,Date,5-20 mins,20-60 mins,1-6 hrs,6+ hrs" + "\n"
     while currentTime < endTimeRangeEpoch:
         for network in networks:
             cmx_report_data = network.get_cmx_engagement_report(currentTime, currentTime + 86399)
-            print(cmx_report_data)
             fileOutput = fileOutput + cmx_report_data + "\n"
         
         currentTime = currentTime + 86400
 
+    # Write report to output file
     f = open(csv_file_preamble + "_cmx_engagement_report.csv",'w')
     f.write(cmx_report_data)
     f.close()
 
+    # Set currentTime to first day
     currentTime = startTimeRangeEpoch
 
     print("---------------------------------------------------------------------------")
-    print("CMX Loyalty Report")
+    print("Calculating CMX Loyalty Report")
     print("---------------------------------------------------------------------------")
-    print("Network,Date,Occasional,Daily,First Time")
+    fileOutput = "Network,Date,Occasional,Daily,First Time" + "\n"
     while currentTime < endTimeRangeEpoch:
         for network in networks:
             cmx_report_data = network.get_cmx_loyalty_report(currentTime, startTimeRangeEpoch, endTimeRangeEpoch, 86400)
-            print(cmx_report_data)
             fileOutput = fileOutput + cmx_report_data + "\n"
         
         currentTime = currentTime + 86400
